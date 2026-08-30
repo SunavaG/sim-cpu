@@ -31,6 +31,32 @@ struct Transistor
             return state == State::LOW;
         else
             return state == State::HIGH;
-    }; //check if the transistor is condcting or not
+    }; //check if the transistor is conducting or not
 };
 
+class Circuit
+{
+    private:
+        std::vector<Wire> wires;
+        std::vector<Transistor> transistors;
+
+    public:
+        uint32_t createNode(State initialState = State::DISCONNECTED, bool isFixed)
+        {
+            uint32_t id = wires.size();
+            wires.push_back({id, isFixed, initialState, initialState});
+            return id;
+        };
+
+        void addPMOS(uint32_t gate, uint32_t source, uint32_t drain)
+        {
+            bool isPMOS = true;
+            transistors.push_back({isPMOS, gate, source, drain});
+        };
+
+        void addNMOS(uint32_t gate, uint32_t source, uint32_t drain)
+        {
+            bool isPMOS = false;
+            transistors.push_back({isPMOS, gate, source, drain});
+        };
+};
