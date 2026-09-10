@@ -83,8 +83,9 @@ class UnionFind
             b = find(b);
 
             if (a==b)
+            {
                 return;
-
+            }
             if (rank[a] < rank[b])
             {
                 parent[a] = b;
@@ -180,9 +181,6 @@ class Circuit
             {
                 const size_t root = uf.find(wireId);
 
-                if(!wires[wireId].isFixed)
-                    continue;
-
                 const State value = wires[wireId].currentState;
 
                 auto iter = componentState.find(root);
@@ -198,6 +196,9 @@ class Circuit
 
             for(size_t wireId = 0; wireId < wires.size(); wireId++)
             {
+                if(wires[wireId].isFixed)
+                    continue;
+                
                 const size_t root = uf.find(wireId);
 
                 auto iter = componentState.find(root);
@@ -216,4 +217,10 @@ class Circuit
                 wire.currentState = wire.nextState;
             }
         };
+
+        void clear()
+        {
+            wires.clear();
+            transistors.clear();
+        }
 };
