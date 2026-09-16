@@ -5,6 +5,7 @@
 void addpmos(std::ofstream& file);
 void addnmos(std::ofstream& file);
 void inv(std::ofstream& file);
+void seriesnmos(std::ofstream& file);
 
 
 int main()
@@ -13,6 +14,8 @@ int main()
     addpmos(Myfile);
     addnmos(Myfile);
     inv(Myfile);
+
+    seriesnmos(Myfile);
 }
 
 void addpmos(std::ofstream& file)
@@ -172,4 +175,65 @@ void inv(std::ofstream& file)
     breadboard.clear();
     }
     
+}
+
+
+void seriesnmos(std::ofstream& file)
+{
+    Circuit breadboard;
+    {
+        uint32_t VCC = breadboard.createWire(true, State::HIGH);
+        uint32_t GND = breadboard.createWire(true, State::LOW);
+
+        uint32_t inputHigh = breadboard.createWire(true, State::HIGH);
+        uint32_t inputLow = breadboard.createWire(true, State::LOW);
+        uint32_t intermediate = breadboard.createWire(false);
+        uint32_t output = breadboard.createWire(false);
+
+        breadboard.addNMOS(inputHigh, GND, intermediate);
+        breadboard.addNMOS(inputLow, intermediate, output);
+        breadboard.evaluate();
+
+        file << "Adding NMOS in series with two inputs and same Output line" << '\n';
+        file << "Input A: " << static_cast<int>(breadboard.getWireState(inputHigh)) << '\n';
+        file << "Input B: " << static_cast<int>(breadboard.getWireState(inputLow)) << '\n';
+        file << "Output: " << static_cast<int>(breadboard.getWireState(output)) << "\n\n\n";
+        breadboard.clear();
+    }
+
+    {
+        uint32_t VCC = breadboard.createWire(true, State::HIGH);
+        uint32_t GND = breadboard.createWire(true, State::LOW);
+
+        uint32_t inputHigh = breadboard.createWire(true, State::HIGH);
+        uint32_t inputLow = breadboard.createWire(true, State::LOW);
+        uint32_t output = breadboard.createWire(false);
+
+        breadboard.addNMOS(inputLow, GND, output);
+        breadboard.addNMOS(inputHigh, GND, output);
+        breadboard.evaluate();
+
+        file << "Input A: " << static_cast<int>(breadboard.getWireState(inputHigh)) << '\n';
+        file << "Input B: " << static_cast<int>(breadboard.getWireState(inputLow)) << '\n';
+        file << "Output: " << static_cast<int>(breadboard.getWireState(output)) << "\n\n\n";
+        breadboard.clear();
+    }
+
+    {
+        uint32_t VCC = breadboard.createWire(true, State::HIGH);
+        uint32_t GND = breadboard.createWire(true, State::LOW);
+
+        uint32_t inputHigh = breadboard.createWire(true, State::HIGH);
+        uint32_t inputDisc = breadboard.createWire(true, State::DISCONNECTED);
+        uint32_t output = breadboard.createWire(false);
+
+        breadboard.addNMOS(inputHigh, GND, output);
+        breadboard.addNMOS(inputDisc, GND, output);
+        breadboard.evaluate();
+
+        file << "Input A: " << static_cast<int>(breadboard.getWireState(inputHigh)) << '\n';
+        file << "Input B: " << static_cast<int>(breadboard.getWireState(inputDisc)) << '\n';
+        file << "Output: " << static_cast<int>(breadboard.getWireState(output)) << "\n\n\n";
+        breadboard.clear();
+    }
 }
