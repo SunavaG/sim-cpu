@@ -1,7 +1,7 @@
 #pragma once
 #include "../transistors/transistors.hpp"
 
-void addNAND(
+inline void addNAND(
     Circuit& circuit,
     uint32_t inputWireA,
     uint32_t inputWireB,

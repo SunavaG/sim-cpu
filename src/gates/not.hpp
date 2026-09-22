@@ -3,7 +3,7 @@
 #include "../transistors/transistors.hpp"
 
 
-void addNOT(
+inline void addNOT(
     Circuit& circuit,
     uint32_t inputWire,
     uint32_t outputWire,
