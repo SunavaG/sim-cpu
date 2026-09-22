@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include  <cstddef>
+#include <cstddef>
 #include <unordered_map>
 
-enum class State: uint8_t 
+enum class State : uint8_t
 {
     HIGH = 1,
     LOW = 0,
@@ -15,7 +15,7 @@ enum class State: uint8_t
 struct Wire
 {
     uint32_t id;
-    bool isFixed; //connected to vcc, gnd, or input(basically externally driven)
+    bool isFixed; // connected to vcc, gnd, or input(basically externally driven)
     State currentState;
     State nextState;
 };
@@ -23,9 +23,9 @@ struct Wire
 struct Transistor
 {
     bool isPMOS;
-    uint32_t gateWireId; //wire id connected to Gate
-    uint32_t sourceWireId; //wire id connected to Source
-    uint32_t drainWireId; //wire id connected to Drain
+    uint32_t gateWireId;   // wire id connected to Gate
+    uint32_t sourceWireId; // wire id connected to Source
+    uint32_t drainWireId;  // wire id connected to Drain
 
     bool isConducting(State state) const
     {
@@ -33,7 +33,7 @@ struct Transistor
             return state == State::LOW;
         else
             return state == State::HIGH;
-    }; //check if the transistor is conducting or not
+    }; // check if the transistor is conducting or not
 };
 
 State resolveStates(State a, State b)
@@ -55,172 +55,201 @@ State resolveStates(State a, State b)
 
 class UnionFind
 {
-    private:
-        std::vector<size_t> parent;
-        std::vector<size_t> rank;
-    public:
-        UnionFind(size_t size) : parent(size), rank(size, 0)
+private:
+    std::vector<size_t> parent;
+    std::vector<size_t> rank;
+
+public:
+    UnionFind(size_t size) : parent(size), rank(size, 0)
+    {
+        for (size_t i = 0; i < size; i++)
         {
-            for (size_t i = 0; i < size; i++)
-            {
-                parent[i] = i;
-            }
+            parent[i] = i;
+        }
+    }
+
+    size_t find(size_t x)
+    {
+        if (parent[x] != x)
+        {
+            parent[x] = find(parent[x]);
         }
 
-        size_t find(size_t x)
+        return parent[x];
+    }
+
+    void unite(size_t a, size_t b)
+    {
+        a = find(a);
+        b = find(b);
+
+        if (a == b)
         {
-            if(parent[x] != x)
-            {
-                parent[x] = find(parent[x]);
-            }
-
-            return parent[x];
+            return;
         }
-
-        void unite(size_t a, size_t b)
+        if (rank[a] < rank[b])
         {
-            a = find(a);
-            b = find(b);
-
-            if (a==b)
-            {
-                return;
-            }
-            if (rank[a] < rank[b])
-            {
-                parent[a] = b;
-            }
-            else if (rank[a] > rank[b])
-            {
-                parent[b] = a;
-            }
-            else
-            {
-                parent[b] = a;
-                rank[a]++;
-            }
+            parent[a] = b;
         }
+        else if (rank[a] > rank[b])
+        {
+            parent[b] = a;
+        }
+        else
+        {
+            parent[b] = a;
+            rank[a]++;
+        }
+    }
 };
 
 class Circuit
 {
-    private:
-        std::vector<Wire> wires;
-        std::vector<Transistor> transistors;
+private:
+    std::vector<Wire> wires;
+    std::vector<Transistor> transistors;
 
-    public:
-        uint32_t createWire(bool isFixed, State initialState = State::DISCONNECTED)
+public:
+    uint32_t createWire(bool isFixed, State initialState = State::DISCONNECTED)
+    {
+        uint32_t id = wires.size();
+        wires.push_back({id, isFixed, initialState, initialState});
+        return id;
+    };
+
+    void addPMOS(uint32_t gate, uint32_t source, uint32_t drain)
+    {
+        bool isPMOS = true;
+        transistors.push_back({isPMOS, gate, source, drain});
+    };
+
+    void addNMOS(uint32_t gate, uint32_t source, uint32_t drain)
+    {
+        bool isPMOS = false;
+        transistors.push_back({isPMOS, gate, source, drain});
+    };
+
+    void setWireState(uint32_t wireId, State state)
+    {
+        if (wireId < wires.size())
         {
-            uint32_t id = wires.size();
-            wires.push_back({id, isFixed, initialState, initialState});
-            return id;
+            wires[wireId].currentState = state;
+            wires[wireId].nextState = state;
+        }
+    }
+
+    State getWireState(uint32_t wireId) const
+    {
+        if (wireId < wires.size())
+        {
+            return wires[wireId].currentState;
+        }
+        return State::DISCONNECTED;
+    }
+
+    void evaluate()
+    {
+        std::vector<bool> conducting(transistors.size(), false);
+
+        for (uint32_t i = 0; i < transistors.size(); i++)
+        {
+            const auto &t = transistors[i];
+
+            State gateVal = wires[t.gateWireId].currentState;
+            conducting[i] = t.isConducting(gateVal);
         };
 
-        void addPMOS(uint32_t gate, uint32_t source, uint32_t drain)
+        UnionFind uf(wires.size());
+
+        for (uint32_t i = 0; i < transistors.size(); i++)
         {
-            bool isPMOS = true;
-            transistors.push_back({isPMOS, gate, source, drain});
+            if (!conducting[i])
+                continue;
+
+            const auto &t = transistors[i];
+            uf.unite(t.sourceWireId, t.drainWireId);
         };
 
-        void addNMOS(uint32_t gate, uint32_t source, uint32_t drain)
+        for (auto &wire : wires)
         {
-            bool isPMOS = false;
-            transistors.push_back({isPMOS, gate, source, drain});
-        };
-
-        void setWireState(uint32_t wireId, State state) 
-        {
-            if (wireId < wires.size()) {
-                wires[wireId].currentState = state;
-                wires[wireId].nextState = state;
+            if (!wire.isFixed)
+            {
+                wire.nextState = State::DISCONNECTED;
             }
         }
 
-        State getWireState(uint32_t wireId) const 
+        std::unordered_map<size_t, State> componentState;
+
+        for (size_t wireId = 0; wireId < wires.size(); wireId++)
         {
-            if (wireId < wires.size()) {
-                return wires[wireId].currentState;
+            if (!wires[wireId].isFixed)
+                continue;
+
+            const size_t root = uf.find(wireId);
+
+            const State value = wires[wireId].currentState;
+
+            auto iter = componentState.find(root);
+
+            if (iter == componentState.end())
+            {
+                componentState.emplace(root, value);
             }
-            return State::DISCONNECTED;
+            else
+            {
+                iter->second = resolveStates(iter->second, value);
+            }
         }
 
-        void evaluate()
+        for (size_t wireId = 0; wireId < wires.size(); wireId++)
         {
-            std::vector<bool> conducting(transistors.size(), false);
+            if (wires[wireId].isFixed)
+                continue;
 
-            for(uint32_t i = 0; i < transistors.size(); i++)
+            const size_t root = uf.find(wireId);
+
+            auto iter = componentState.find(root);
+
+            if (iter != componentState.end())
             {
-                const auto& t = transistors[i];
-
-                State gateVal = wires[t.gateWireId].currentState;
-                conducting[i] = t.isConducting(gateVal);
-            };
-
-            UnionFind uf(wires.size());
-
-            for(uint32_t i = 0; i < transistors.size(); i++)
-            {
-                if(!conducting[i])
-                    continue;
-
-                const auto& t= transistors[i];
-                uf.unite(t.sourceWireId, t.drainWireId);
-            };
-
-            for (auto& wire: wires)
-            {
-                if (!wire.isFixed)
-                {
-                    wire.nextState = State::DISCONNECTED;
-                }
+                wires[wireId].nextState = iter->second;
             }
-
-            std::unordered_map<size_t, State> componentState;
-
-            for (size_t wireId = 0; wireId < wires.size(); wireId++)
+            else
             {
-                const size_t root = uf.find(wireId);
-
-                const State value = wires[wireId].currentState;
-
-                auto iter = componentState.find(root);
-
-                if(iter == componentState.end())
-                {
-                    componentState.emplace(root, value);
-                }
-                else{
-                    iter->second = resolveStates(iter->second, value);
-                }
+                wires[wireId].nextState = State::DISCONNECTED;
             }
-
-            for(size_t wireId = 0; wireId < wires.size(); wireId++)
-            {
-                if(wires[wireId].isFixed)
-                    continue;
-                
-                const size_t root = uf.find(wireId);
-
-                auto iter = componentState.find(root);
-
-                if(iter != componentState.end())
-                {
-                    wires[wireId].nextState = iter->second;
-                }
-                else{
-                    wires[wireId].nextState = State::DISCONNECTED;
-                }
-            }
-
-            for(auto& wire: wires)
-            {
-                wire.currentState = wire.nextState;
-            }
-        };
-
-        void clear()
-        {
-            wires.clear();
-            transistors.clear();
         }
+
+        for (auto &wire : wires)
+        {
+            wire.currentState = wire.nextState;
+        }
+    };
+
+    bool settle(size_t maxIter = 128)
+    {
+        std::vector<State> before(wires.size());
+        for (size_t i = 0; i < maxIter; ++i)
+        {
+            for (size_t j = 0; j < wires.size(); ++j)
+                before[j] = wires[j].currentState;
+            evaluate();
+            bool stable = true;
+            for (size_t j = 0; j < wires.size(); ++j)
+                if (wires[j].currentState != before[j])
+                {
+                    stable = false;
+                    break;
+                }
+            if (stable)
+                return true;
+        }
+        return false;
+    }
+
+    void clear()
+    {
+        wires.clear();
+        transistors.clear();
+    }
 };
