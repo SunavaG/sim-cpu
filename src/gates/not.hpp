@@ -2,7 +2,7 @@
 #pragma once
 #include "../transistors/transistors.hpp"
 
-
+namespace gates{
 inline void addNOT(
     Circuit& circuit,
     uint32_t inputWire,
@@ -15,4 +15,4 @@ inline void addNOT(
     circuit.addNMOS(inputWire, GND, outputWire);    
 
     
-}
+}}
