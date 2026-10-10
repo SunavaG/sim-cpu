@@ -1,5 +1,5 @@
 #pragma once
-#include "chip.hpp"
+#include "../chip.hpp"
 
 struct fullAdderResult
 {
